@@ -2,6 +2,7 @@ from langchain.schema import HumanMessage, SystemMessage
 from langchain_community.document_loaders import TextLoader
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
+from chromadb.config import Settings  
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import RetrievalQA
 from langchain.prompts import (
@@ -49,10 +50,16 @@ chunks = splitter.split_documents(docs)
 embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-m3")
 
 # --- Vector database ---
+
+# สร้าง Chroma แบบ in-memory ชัดเจน
 vectordb = Chroma.from_documents(
     documents=chunks,
     embedding=embeddings,
-    persist_directory=None  # ✅ บังคับให้ใช้แบบ in-memory
+    client_settings=Settings(
+        chroma_db_impl="duckdb+parquet",
+        persist_directory=None,   # 👈 ห้ามใช้ persist!
+        anonymized_telemetry=False
+    )
 )
 
 
