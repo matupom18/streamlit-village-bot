@@ -1,8 +1,8 @@
 from langchain.schema import HumanMessage, SystemMessage
-from langchain.document_loaders import DirectoryLoader
+from langchain_community.document_loaders import TextLoader
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 from langchain.prompts import (
     ChatPromptTemplate,
@@ -31,9 +31,17 @@ conn = mysql.connector.connect(
 cursor = conn.cursor()
 
 # --- Load and process documents ---
-docs_path = os.path.join(os.path.dirname(__file__), "village_docs")
-loader = DirectoryLoader(docs_path, glob="**/*.txt")
-docs = loader.load()
+from pathlib import Path
+
+def load_txt_documents(directory):
+    docs = []
+    for file_path in Path(directory).rglob("*.txt"):
+        loader = TextLoader(str(file_path), encoding="utf-8")
+        docs.extend(loader.load())
+    return docs
+
+docs = load_txt_documents("village_docs")
+
 splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
 chunks = splitter.split_documents(docs)
 
@@ -43,9 +51,9 @@ embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-m3")
 # --- Vector database ---
 vectordb = Chroma.from_documents(
     documents=chunks,
-    embedding=embeddings,
-    persist_directory="chroma_db"
-)
+    embedding=embeddings
+)  # No persist_directory to avoid backend issues
+
 retriever = vectordb.as_retriever(search_kwargs={"k": 5})
 
 # --- LLM setup ---
