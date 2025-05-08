@@ -51,8 +51,10 @@ embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-m3")
 # --- Vector database ---
 vectordb = Chroma.from_documents(
     documents=chunks,
-    embedding=embeddings
-)  # No persist_directory to avoid backend issues
+    embedding=embeddings,
+    persist_directory=None  # ✅ บังคับให้ใช้แบบ in-memory
+)
+
 
 retriever = vectordb.as_retriever(search_kwargs={"k": 5})
 
